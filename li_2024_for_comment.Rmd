@@ -1,0 +1,124 @@
+---
+title: "Li et al. (2024) reanalysis"
+author: "John Mulvey"
+date: "29th April 2025"
+output:
+  html_notebook:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: flatly
+    highlight: tango
+  html_document:
+    toc: true
+    df_print: paged
+---
+
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+```
+
+
+# load data
+Supplementary data obtained from https://doi.org/10.1161/CIRCHEARTFAILURE.124.011725 on 20250429. Here we load the protein abundance data from Table S2 and the sample metadata from Table S1.
+```{r}
+li_2024_abundance = readxl::read_xlsx("data/circhf-2024-011725d-s01.xlsx",
+                  sheet = "Table S2",
+                  skip = 2,
+                  na = "NA") %>%
+  dplyr::rename(gene = ...1) # add name for column contain gene names or symbols
+
+li_2024_sample_meta = readxl::read_xlsx("data/circhf-2024-011725d-s01.xlsx",
+                  sheet = "Table S1",
+                  skip = 2,
+                  na = "NA") %>%
+  clean_names() %>%
+  dplyr::mutate(across(where(is.character), as.factor))
+
+# wrangle into tidy format
+all(colnames(select(li_2024_abundance, -gene)) %in% li_2024_sample_meta$sample_id) # check all samples in abundance data are in sample metadata
+
+li_2024_abundance_tidy = li_2024_abundance %>%
+  pivot_longer(cols = -gene,
+               names_to = "sample_id",
+             values_to = "abundance") %>%
+  left_join(li_2024_sample_meta, by = "sample_id") %>%
+  dplyr::mutate(condition = factor(condition, levels = c("Donor", "DCM", "PPCM"))) # reorder factor levels for plotting
+```
+
+
+# calculate percentage of missing values
+In Figure 3H of the authors paper, there are fewer data points than the stated sample size. Here we calculate the overall average percentage of values that are missing in the proteomics datasets, across all proteins and samples.
+```{r}
+li_2024_abundance_tidy %>%
+  summarise(n_missing = sum(is.na(abundance)),
+            total_expected_values = n(),
+            percent_missing = n_missing / total_expected_values * 100)
+```
+
+
+# SBSPON
+SBSPON is one of 2 proteins that the authors conclude significantly differ in adundance between peripartum cardiomyopathy (PPCM) and dilated cardiomyopathy (DCM). Utilising the data presented in the supplement, we plot the protein abundance across all experimental groups. Note that the data are plotted directly as presented in the supplement, and have not been normalised or (log) transformed as is should be done to quantitatively interpret the differences between groups.
+
+## plot
+```{r}
+li_2024_abundance_tidy  %>% 
+  filter(gene == "SBSPON") %>%
+  ggplot(aes(x = condition, y = abundance, fill = condition)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, alpha = 0.5) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(),
+        legend.position = "none") +
+  ggtitle("SBSPON protein abundance") +
+  labs(y = "Protein Abundance, AU")
+```
+
+
+## count number of valid values
+We then produce a table to confirm the number of valid values in each group. This corresponds to the actual sample size used to statistically test for the difference in abundance between the PPCM and DCM groups.
+```{r}
+li_2024_abundance_tidy %>%
+  dplyr::filter(gene == "SBSPON" & !is.na(abundance)) %>%
+  group_by(condition) %>%
+  summarise(n = n())
+```
+Figure 3H contains 1 datapoint for PPCM and 3 for DCM, meaning again that either the information in Table S1 or Table S2 is incorrect, or a different protein has been plotted in the manuscript.
+
+
+# TNS3
+TNS3 is the second protein that the authors conclude differs significantly between PPCM and DCM. We similarly plot and produce a table of the number of measured values in each group.
+
+## plot
+```{r}
+li_2024_abundance_tidy  %>% 
+  filter(gene == "TNS3") %>%
+  ggplot(aes(x = condition, y = abundance, fill = condition)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, alpha = 0.5) +
+  theme_classic() +
+  theme(axis.title.x = element_blank(),
+        legend.position = "none") +
+  ggtitle("TNS3 protein abundance") +
+  labs(y = "Protein Abundance, AU") 
+```
+
+
+## count number of valid values
+```{r}
+li_2024_abundance_tidy %>%
+  dplyr::filter(gene == "TNS3" & !is.na(abundance)) %>%
+  group_by(condition) %>%
+  summarise(n = n())
+```
+The plot of TNS3 in Figure 3H contains 1 data point for PPCM and 5 for DCM, meaning again that either the information in Table S1 or Table S2 is incorrect, or a different protein has been plotted in the manuscript.
+
+
+# session info
+```{r}
+sessionInfo()
+```
+
