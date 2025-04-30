@@ -1,1 +1,1 @@
-# li_2024
+This repository contains analysis of the supplementary data provided in [Li et al. 2024](https://www.ahajournals.org/doi/10.1161/CIRCHEARTFAILURE.124.011725), with DOI 10.1161/CIRCHEARTFAILURE.124.011725. It accompanies a comment submitted on the article, highlighting the extent to which the data that they present supports the conclusion they draw that the proteins SBSPON and TNS3 differ in abundance between peripartum cardiomyopathy and familial dilated cardiomyopathy.
